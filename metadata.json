@@ -1,0 +1,22 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Id": "com.github.dip.speedingbullet",
+        "Name": "Speeding Bullet",
+        "Description": "Real-time network upload & download speed monitor for the panel",
+        "Icon": "network-wired",
+        "Version": "1.0.0",
+        "License": "MIT",
+        "Authors": [
+            {
+                "Name": "dip",
+                "Email": ""
+            }
+        ],
+        "Category": "System Information",
+        "EnabledByDefault": true
+    },
+    "X-Plasma-API": "declarativeappletscript",
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-MainScript": "ui/main.qml"
+}
