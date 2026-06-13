@@ -100,7 +100,7 @@ PlasmoidItem {
     // ══════════════════════════════════════════════════════════════════════
     compactRepresentation: Item {
         id: panelRoot
-        readonly property int fSize: Math.round(Kirigami.Units.gridUnit * 0.68)
+        readonly property int fSize: Math.round(Kirigami.Units.gridUnit * 0.68 * (Plasmoid.configuration.fontSizeScale || 1.0))
 
         // 1. Tell the panel's containment layout exactly how much space to allocate.
         // We use Math.max to provide a safe fallback (≈ 100px) while the custom font loads,
@@ -145,7 +145,7 @@ PlasmoidItem {
             Text {
                 text: "↑"
                 font.pixelSize: panelRoot.fSize
-                color: Kirigami.Theme.neutralTextColor
+                color: Kirigami.Theme.positiveTextColor
                 Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
             }
             Text {
@@ -207,7 +207,7 @@ PlasmoidItem {
                     font.family:    interFont.status === FontLoader.Ready ? "Inter" : "sans-serif"
                     font.pixelSize: Kirigami.Units.gridUnit * 1.4
                     font.weight:    Font.Medium
-                    color:          Kirigami.Theme.neutralTextColor
+                    color:          Kirigami.Theme.positiveTextColor
                 }
                 Text {
                     text:           root.fmt(root.uploadSpeed)
