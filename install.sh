@@ -37,11 +37,10 @@ reload)
     echo "🔄  Syncing files..."
     mkdir -p "$INSTALL_DIR"
     rsync -a --delete "$WIDGET_SRC/" "$INSTALL_DIR/"
-    echo "🔃  Refreshing Plasma shell..."
-    qdbus6 org.kde.plasmashell /PlasmaShell \
-        org.kde.PlasmaShell.refreshCurrentShell 2>/dev/null \
-        || echo "   (refreshCurrentShell not available — restart Plasma manually)"
-    echo "✅  Done"
+    echo ""
+    echo "✅  Files synced. To see changes:"
+    echo "   Test safely:  plasmawindowed $PLUGIN_ID"
+    echo "   (Do NOT restart plasmashell — close & re-add the widget to panel instead)"
     ;;
 
 *)

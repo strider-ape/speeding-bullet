@@ -7,7 +7,6 @@ import org.kde.kirigami as Kirigami
 PlasmoidItem {
     id: root
 
-    // ── Always show compact (panel) view ─────────────────────────────────
     preferredRepresentation: compactRepresentation
 
     // ── Inter font ────────────────────────────────────────────────────────
@@ -17,13 +16,12 @@ PlasmoidItem {
     }
 
     // ── State ─────────────────────────────────────────────────────────────
-    property real downloadSpeed: 0   // bytes/s
-    property real uploadSpeed:   0   // bytes/s
+    property real downloadSpeed: 0
+    property real uploadSpeed:   0
     property var  prevRx:        ({})
     property var  prevTx:        ({})
-    property real prevTime:      0   // ms
+    property real prevTime:      0
 
-    // ── Interface prefixes to skip ────────────────────────────────────────
     readonly property var skipPrefixes: [
         "lo", "tun", "virbr", "docker", "veth", "br-",
         "vmnet", "vboxnet", "dummy", "bond"
@@ -36,7 +34,6 @@ PlasmoidItem {
         return false
     }
 
-    // ── Speed formatter ───────────────────────────────────────────────────
     function fmt(bps) {
         if      (bps >= 1073741824) return (bps / 1073741824).toFixed(2) + " GB/s"
         else if (bps >= 1048576)    return (bps / 1048576   ).toFixed(2) + " MB/s"
@@ -44,21 +41,19 @@ PlasmoidItem {
         else                        return bps.toFixed(0)               + " B/s"
     }
 
-    // ── Executable DataSource — runs shell commands, returns stdout ────────
+    // ── DataSource ────────────────────────────────────────────────────────
     Plasma5Support.DataSource {
         id: executable
         engine: "executable"
         connectedSources: []
-
         onNewData: function(sourceName, data) {
             disconnectSource(sourceName)
             root.parseNetDev(data["stdout"] || "")
         }
     }
 
-    // ── Parse /proc/net/dev output ────────────────────────────────────────
     function parseNetDev(text) {
-        var now  = Date.now()
+        var now   = Date.now()
         var lines = text.split("\n")
         var curRx = {}
         var curTx = {}
@@ -66,24 +61,19 @@ PlasmoidItem {
         for (var i = 2; i < lines.length; i++) {
             var line  = lines[i].trim()
             if (!line) continue
-
             var colon = line.indexOf(":")
             if (colon < 0) continue
-
             var iface = line.substring(0, colon).trim()
             if (shouldSkip(iface)) continue
-
-            var cols = line.substring(colon + 1).trim().split(/\s+/)
+            var cols  = line.substring(colon + 1).trim().split(/\s+/)
             if (cols.length < 9) continue
-
-            curRx[iface] = parseInt(cols[0], 10) || 0   // rx bytes
-            curTx[iface] = parseInt(cols[8], 10) || 0   // tx bytes
+            curRx[iface] = parseInt(cols[0], 10) || 0
+            curTx[iface] = parseInt(cols[8], 10) || 0
         }
 
         if (root.prevTime > 0) {
             var dt  = (now - root.prevTime) / 1000.0
-            var dRx = 0
-            var dTx = 0
+            var dRx = 0, dTx = 0
             for (var k in curRx) {
                 dRx += curRx[k] - (root.prevRx[k] || 0)
                 dTx += curTx[k] - (root.prevTx[k] || 0)
@@ -97,7 +87,6 @@ PlasmoidItem {
         root.prevTime = now
     }
 
-    // ── 1-second polling timer ────────────────────────────────────────────
     Timer {
         interval:         1000
         running:          true
@@ -107,73 +96,71 @@ PlasmoidItem {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Compact representation — shown in the panel
+    // Compact representation — panel view
     // ══════════════════════════════════════════════════════════════════════
     compactRepresentation: Item {
-        id: panelItem
+        id: panelRoot
+        readonly property int fSize: Math.round(Kirigami.Units.gridUnit * 0.68)
 
-        implicitWidth:  speedCol.implicitWidth  + Kirigami.Units.smallSpacing * 3
-        implicitHeight: speedCol.implicitHeight + Kirigami.Units.smallSpacing
+        // 1. Tell the panel's containment layout exactly how much space to allocate.
+        // We use Math.max to provide a safe fallback (≈ 100px) while the custom font loads,
+        // preventing the layout engine from ever registering a 0-width state.
+        Layout.minimumWidth: Math.max(Kirigami.Units.gridUnit * 5.5, dummyMetrics.advanceWidth + Kirigami.Units.largeSpacing)
+        Layout.preferredWidth: Layout.minimumWidth
+        
+        // 2. Prevent greedy stretching if the panel has empty space.
+        Layout.maximumWidth: Layout.minimumWidth 
 
-        ColumnLayout {
-            id: speedCol
+        TextMetrics {
+            id: dummyMetrics
+            font.family: interFont.name 
+            font.pixelSize: panelRoot.fSize
+            text: "↓  999.99 MB/s" // Widest possible expected string
+        }
+
+        // 3. GridLayout ensures perfect alignment between arrows and values
+        GridLayout {
             anchors.centerIn: parent
-            spacing: 1
+            columns: 2
+            columnSpacing: Kirigami.Units.smallSpacing
+            rowSpacing: 0 // Stack rows tightly
 
-            // ── Download row ──────────────────────────────────────────
-            RowLayout {
-                spacing: Kirigami.Units.smallSpacing
-                Layout.alignment: Qt.AlignRight
-
-                Text {
-                    text:             "↓"
-                    font.family:      interFont.status === FontLoader.Ready ? "Inter" : "sans-serif"
-                    font.pixelSize:   Math.round(Kirigami.Units.gridUnit * 0.68)
-                    font.weight:      Font.Medium
-                    color:            Kirigami.Theme.positiveTextColor
-                    verticalAlignment: Text.AlignVCenter
-                }
-                Text {
-                    text:             root.fmt(root.downloadSpeed)
-                    font.family:      interFont.status === FontLoader.Ready ? "Inter" : "sans-serif"
-                    font.pixelSize:   Math.round(Kirigami.Units.gridUnit * 0.68)
-                    font.weight:      Font.Medium
-                    color:            Kirigami.Theme.textColor
-                    horizontalAlignment: Text.AlignRight
-                    Layout.minimumWidth: Kirigami.Units.gridUnit * 4.8
-                    verticalAlignment:   Text.AlignVCenter
-                }
+            // Row 1: Download
+            Text {
+                text: "↓"
+                font.pixelSize: panelRoot.fSize
+                color: Kirigami.Theme.positiveTextColor
+                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+            }
+            Text {
+                text: root.fmt(root.downloadSpeed)
+                font.pixelSize: panelRoot.fSize
+                font.family: interFont.name // Apply your custom font
+                color: Kirigami.Theme.textColor
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignRight
             }
 
-            // ── Upload row ────────────────────────────────────────────
-            RowLayout {
-                spacing: Kirigami.Units.smallSpacing
-                Layout.alignment: Qt.AlignRight
-
-                Text {
-                    text:             "↑"
-                    font.family:      interFont.status === FontLoader.Ready ? "Inter" : "sans-serif"
-                    font.pixelSize:   Math.round(Kirigami.Units.gridUnit * 0.68)
-                    font.weight:      Font.Medium
-                    color:            Kirigami.Theme.neutralTextColor
-                    verticalAlignment: Text.AlignVCenter
-                }
-                Text {
-                    text:             root.fmt(root.uploadSpeed)
-                    font.family:      interFont.status === FontLoader.Ready ? "Inter" : "sans-serif"
-                    font.pixelSize:   Math.round(Kirigami.Units.gridUnit * 0.68)
-                    font.weight:      Font.Medium
-                    color:            Kirigami.Theme.textColor
-                    horizontalAlignment: Text.AlignRight
-                    Layout.minimumWidth: Kirigami.Units.gridUnit * 4.8
-                    verticalAlignment:   Text.AlignVCenter
-                }
+            // Row 2: Upload
+            Text {
+                text: "↑"
+                font.pixelSize: panelRoot.fSize
+                color: Kirigami.Theme.neutralTextColor
+                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+            }
+            Text {
+                text: root.fmt(root.uploadSpeed)
+                font.pixelSize: panelRoot.fSize
+                font.family: interFont.name // Apply your custom font
+                color: Kirigami.Theme.textColor
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignRight
             }
         }
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Full representation — shown when expanded / on desktop
+    // Full representation — expanded / desktop view
     // ══════════════════════════════════════════════════════════════════════
     fullRepresentation: Item {
         implicitWidth:  Kirigami.Units.gridUnit * 14
@@ -184,13 +171,13 @@ PlasmoidItem {
             spacing: Kirigami.Units.largeSpacing
 
             Text {
-                Layout.alignment:    Qt.AlignHCenter
-                text:                "Network Speed"
-                font.family:         interFont.status === FontLoader.Ready ? "Inter" : "sans-serif"
-                font.pixelSize:      Kirigami.Units.gridUnit * 0.85
-                font.weight:         Font.SemiBold
-                font.letterSpacing:  1.2
-                color:               Kirigami.Theme.disabledTextColor
+                Layout.alignment:   Qt.AlignHCenter
+                text:               "Network Speed"
+                font.family:        interFont.status === FontLoader.Ready ? "Inter" : "sans-serif"
+                font.pixelSize:     Kirigami.Units.gridUnit * 0.85
+                font.weight:        Font.SemiBold
+                font.letterSpacing: 1.2
+                color:              Kirigami.Theme.disabledTextColor
             }
 
             RowLayout {
