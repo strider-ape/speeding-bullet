@@ -4,7 +4,7 @@ A minimal, fast internet speed monitor widget for KDE Plasma 6. It sits in your 
 
 ## Screenshots
 
-*(Add your screenshots here later)*
+<img width="119" height="44" alt="kwinshot_20260613_122406" src="https://github.com/user-attachments/assets/4e061a21-7064-49e8-b2d5-c10488b68973" />
 
 ## Features
 
