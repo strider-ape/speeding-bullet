@@ -20,6 +20,7 @@ A minimal, fast internet speed monitor widget for KDE Plasma 6. It sits in your 
 - **Operating System**: Linux
 - **Desktop Environment**: KDE Plasma 6+
 - **Frameworks**: KDE Frameworks 6+
+- **Dependencies**: `vnstat` (Required for the "Today's Usage" hover pop-up feature)
 
 ## Installation
 
