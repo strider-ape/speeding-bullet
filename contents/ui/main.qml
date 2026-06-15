@@ -9,6 +9,9 @@ PlasmoidItem {
 
     preferredRepresentation: compactRepresentation
 
+    toolTipMainText: "Today's Usage"
+    toolTipSubText: "↓ " + root.fmtBytes(root.dailyDownload) + "\n↑ " + root.fmtBytes(root.dailyUpload)
+
     // ── Inter font ────────────────────────────────────────────────────────
     FontLoader {
         id: interFont
@@ -21,6 +24,8 @@ PlasmoidItem {
     property var  prevRx:        ({})
     property var  prevTx:        ({})
     property real prevTime:      0
+    property real dailyDownload: 0
+    property real dailyUpload:   0
 
     readonly property var skipPrefixes: [
         "lo", "tun", "virbr", "docker", "veth", "br-",
@@ -39,6 +44,13 @@ PlasmoidItem {
         else if (bps >= 1048576)    return (bps / 1048576   ).toFixed(2) + " MB/s"
         else if (bps >= 1024)       return (bps / 1024      ).toFixed(1) + " KB/s"
         else                        return bps.toFixed(0)               + " B/s"
+    }
+
+    function fmtBytes(bytes) {
+        if      (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + " GB"
+        else if (bytes >= 1048576)    return (bytes / 1048576   ).toFixed(2) + " MB"
+        else if (bytes >= 1024)       return (bytes / 1024      ).toFixed(1) + " KB"
+        else                          return bytes.toFixed(0)               + " B"
     }
 
     // ── DataSource ────────────────────────────────────────────────────────
@@ -93,6 +105,51 @@ PlasmoidItem {
         repeat:           true
         triggeredOnStart: true
         onTriggered:      executable.connectSource("cat /proc/net/dev")
+    }
+
+    // ── Daily Usage DataSource (vnstat) ───────────────────────────────────
+    Plasma5Support.DataSource {
+        id: vnstatExecutable
+        engine: "executable"
+        connectedSources: []
+        onNewData: function(sourceName, data) {
+            disconnectSource(sourceName)
+            root.parseVnstat(data["stdout"] || "")
+        }
+    }
+
+    function parseVnstat(jsonText) {
+        if (!jsonText.trim()) return;
+        try {
+            var data = JSON.parse(jsonText)
+            var totalRx = 0
+            var totalTx = 0
+            
+            var interfaces = data.interfaces || []
+            for (var i = 0; i < interfaces.length; i++) {
+                var iface = interfaces[i]
+                if (shouldSkip(iface.name)) continue
+                
+                var traffic = iface.traffic || {}
+                var day = traffic.day || []
+                if (day.length > 0) {
+                    totalRx += day[0].rx || 0
+                    totalTx += day[0].tx || 0
+                }
+            }
+            root.dailyDownload = totalRx
+            root.dailyUpload   = totalTx
+        } catch (e) {
+            console.log("Error parsing vnstat JSON:", e)
+        }
+    }
+
+    Timer {
+        interval:         60000 // Refresh every 1 minute
+        running:          true
+        repeat:           true
+        triggeredOnStart: true
+        onTriggered:      vnstatExecutable.connectSource("vnstat --json d 1")
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -172,7 +229,7 @@ PlasmoidItem {
 
             Text {
                 Layout.alignment:   Qt.AlignHCenter
-                text:               "Network Speed"
+                text:               "Today's Usage"
                 font.family:        interFont.status === FontLoader.Ready ? "Inter" : "sans-serif"
                 font.pixelSize:     Kirigami.Units.gridUnit * 0.85
                 font.weight:        Font.SemiBold
@@ -191,7 +248,7 @@ PlasmoidItem {
                     color:          Kirigami.Theme.positiveTextColor
                 }
                 Text {
-                    text:           root.fmt(root.downloadSpeed)
+                    text:           root.fmt(root.dailyDownload)
                     font.family:    interFont.status === FontLoader.Ready ? "Inter" : "sans-serif"
                     font.pixelSize: Kirigami.Units.gridUnit * 1.4
                     font.weight:    Font.Medium
@@ -210,7 +267,7 @@ PlasmoidItem {
                     color:          Kirigami.Theme.positiveTextColor
                 }
                 Text {
-                    text:           root.fmt(root.uploadSpeed)
+                    text:           root.fmt(root.dailyUpload)
                     font.family:    interFont.status === FontLoader.Ready ? "Inter" : "sans-serif"
                     font.pixelSize: Kirigami.Units.gridUnit * 1.4
                     font.weight:    Font.Medium
