@@ -9,8 +9,46 @@ PlasmoidItem {
 
     preferredRepresentation: compactRepresentation
 
-    toolTipMainText: "Today's Usage"
-    toolTipSubText: "↓ " + root.fmtBytes(root.dailyDownload) + "\n↑ " + root.fmtBytes(root.dailyUpload)
+    toolTipItem: ColumnLayout {
+        spacing: Kirigami.Units.smallSpacing
+        
+        Kirigami.Heading {
+            text: "Today's Usage"
+            level: 3
+            Layout.alignment: Qt.AlignHCenter
+            Layout.bottomMargin: Kirigami.Units.smallSpacing
+        }
+
+        RowLayout {
+            spacing: Kirigami.Units.smallSpacing
+            Text {
+                text: "↓"
+                color: Kirigami.Theme.positiveTextColor
+                font.pixelSize: Kirigami.Units.gridUnit * 0.8
+            }
+            Text {
+                text: root.fmtBytes(root.dailyDownload)
+                color: Kirigami.Theme.textColor
+                font.pixelSize: Kirigami.Units.gridUnit * 0.8
+                font.family: interFont.status === FontLoader.Ready ? "Inter" : "sans-serif"
+            }
+        }
+
+        RowLayout {
+            spacing: Kirigami.Units.smallSpacing
+            Text {
+                text: "↑"
+                color: Kirigami.Theme.positiveTextColor
+                font.pixelSize: Kirigami.Units.gridUnit * 0.8
+            }
+            Text {
+                text: root.fmtBytes(root.dailyUpload)
+                color: Kirigami.Theme.textColor
+                font.pixelSize: Kirigami.Units.gridUnit * 0.8
+                font.family: interFont.status === FontLoader.Ready ? "Inter" : "sans-serif"
+            }
+        }
+    }
 
     // ── Inter font ────────────────────────────────────────────────────────
     FontLoader {
